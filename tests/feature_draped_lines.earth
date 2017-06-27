@@ -1,0 +1,38 @@
+<!--
+osgEarth Sample
+
+Demonstrates feature draping using projective texturing, 
+i.e. "altitude-clamping: terrain-drape".
+-->
+
+<map name="Draped Lines Demo">
+  
+    <options>
+        <terrain min_lod="16"/>
+    </options>
+
+    <image name="world" driver="gdal">
+        <url>../data/world.tif</url>
+        <cache_policy usage="no_cache"/>
+    </image>
+    
+    <feature_model name="world_boundaries">
+            
+        <features name="world" driver="ogr">
+            <url>../data/world.shp</url>
+            <build_spatial_index>true</build_spatial_index>
+        </features>
+                
+        <styles>
+            <style type="text/css">
+                world {
+                   stroke:             #ffff00;
+                   stroke-width:       5px;
+                   altitude-clamping:  terrain-drape;
+                }            
+            </style>
+        </styles>
+        
+    </feature_model>
+  
+</map>

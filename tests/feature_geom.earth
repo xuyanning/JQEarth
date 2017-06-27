@@ -1,0 +1,28 @@
+<!--
+osgEarth Sample
+
+Basic example of how to read feature data from a shapefile and build
+OSG geometry out of it.
+-->
+
+<map name="Feature Geometry Demo" type="geocentric" version="2">
+    	
+    <image name="world" driver="gdal">
+        <url>../data/world.tif</url>
+    </image>
+    
+    <feature_model name="states">
+        <features name="states" driver="ogr">
+            <url>../data/usa.shp</url>
+        </features>        
+        <styles>
+            <style type="text/css">
+                states {
+                   stroke:          #ffff00;
+                   altitude-offset: 1000;      
+				   render-lighting: false;
+                }                    
+            </style>
+        </styles>        
+    </feature_model>
+</map>

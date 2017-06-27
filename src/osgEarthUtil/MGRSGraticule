@@ -1,0 +1,209 @@
+/* -*-c++-*- */
+/* osgEarth - Dynamic map generation toolkit for OpenSceneGraph
+ * Copyright 2016 Pelican Mapping
+ * http://osgearth.org
+ *
+ * osgEarth is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>
+ */
+#ifndef OSGEARTHUTIL_MGRS_GRATICLE
+#define OSGEARTHUTIL_MGRS_GRATICLE
+
+#include <osgEarthUtil/UTMGraticule>
+#include <osgEarth/Extension>
+#include <osgEarth/ModelLayer>
+
+namespace osgEarth { namespace Util
+{
+    using namespace osgEarth;
+    using namespace osgEarth::Symbology;
+
+    /**
+     * Configuration options for the geodetic graticule.
+     */
+    class MGRSGraticuleOptions : public ConfigOptions
+    {
+    public:
+        MGRSGraticuleOptions(const ConfigOptions& conf =ConfigOptions()) : ConfigOptions(conf) {
+            mergeConfig(_conf);
+        }
+
+        /** dtor */
+        virtual ~MGRSGraticuleOptions() { }
+
+        /** Style for grid zone designator geometry and text */
+        optional<Style>& gzdStyle() { return _gzdStyle; }
+        const optional<Style>& gzdStyle() const { return _gzdStyle; }
+
+        /** Symbology for SQID geometry and text */
+        optional<Style>& sqidStyle() { return _sqidStyle; }
+        const optional<Style>& sqidStyle() const { return _sqidStyle; }
+
+    public:
+        Config getConfig() const {
+            Config conf = ConfigOptions::getConfig();
+            conf.key() = "mgrs_graticule";
+            conf.addObjIfSet("gzd_style", _gzdStyle);
+            conf.addObjIfSet("sqid_style", _sqidStyle);
+            return conf;
+        }
+
+    protected:
+
+        void mergeConfig(const Config& conf) {
+            conf.getObjIfSet("gzd_style", _gzdStyle);
+            conf.getObjIfSet("sqid_style", _sqidStyle);
+        }
+
+        optional<Style> _gzdStyle;
+        optional<Style> _sqidStyle;
+    };
+
+
+    /**
+     * Implements a MGRS (Military Grid Reference System) map graticule. 
+     * 
+     * NOTE: So far, this only works for geocentric maps.
+     * TODO: Add projected support; add text label support
+     */
+    class OSGEARTHUTIL_EXPORT MGRSGraticule : public osg::Group,
+                                              public MapNodeObserver,
+                                              public MGRSGraticuleOptions
+    {
+    public:
+
+        /**
+         * Constructs a new graticule for use with the specified map.
+         *
+         * @param map
+         *      Map with which you will use this graticule
+         * @param options
+         *      Optional "options" that configure the graticule. Defaults will be used
+         *      if you don't specify this.
+         */
+        MGRSGraticule(MapNode* mapNode, const MGRSGraticuleOptions& options);
+        
+        /**
+         * Constructs a new MGRS graticule for use with the specified map
+         * using default options.
+         *
+         * @param map
+         *      Map with which you will use this graticule
+         */
+        MGRSGraticule(MapNode* mapNode);
+
+        /**
+         * If you change any of the options, call this to refresh the display
+         * to refelct the new settings.
+         */
+        void refresh();
+
+
+    public: // MapNodeObserver
+        
+        virtual void setMapNode( MapNode* mapNode );
+
+        virtual MapNode* getMapNode() { return _mapNode.get(); }
+
+
+    protected:
+
+        /** dtor */
+        virtual ~MGRSGraticule() { }
+
+
+    private:
+        
+        osg::Group* buildGZDChildren( osg::Group* node, const std::string& gzd );
+
+        osg::Node* buildSQIDTiles( const std::string& gzd );
+        
+        GeoExtent getExtent( const std::string& gzd, const std::string& sqid );
+
+        friend class MGRSGraticuleFactory;
+
+        void applyDefaultStyles();
+
+        /** one-time initialization called by each constructor */
+        void ctor();
+
+        /** called whenever we need to reconstruct the graticule's graph */
+        void rebuild();
+
+        osg::observer_ptr<MapNode> _mapNode;
+
+        UID _uid;
+
+        osg::ref_ptr<const Profile> _profile;
+
+        osg::ref_ptr<FeatureProfile> _featureProfile;
+
+        osg::ref_ptr<osg::ClipPlane> _clipPlane;
+
+        osg::Group* _root;
+
+        UTMData _utmData;
+    };
+
+    
+    /**
+     * Extension that lets you load and configure an MGRS Graticuler from an earth file.
+     * Usage:
+     *    <mgrs_graticule>
+     *       ...
+     *    </mgrs_graticule>
+     */
+    class MGRSGraticuleExtension : public Extension,
+                                   public ExtensionInterface<MapNode>,
+                                   public MGRSGraticuleOptions
+    {
+    public:
+        META_Object(osgearth_mgrs_graticule, MGRSGraticuleExtension);
+
+        // CTORs
+        MGRSGraticuleExtension() { }
+        MGRSGraticuleExtension(const MGRSGraticuleOptions& options) : MGRSGraticuleOptions(options) { }
+
+        // DTOR
+        virtual ~MGRSGraticuleExtension() { }
+
+
+    public: // Extension
+
+        virtual const ConfigOptions& getConfigOptions() const { return *this; }
+
+
+    public: // ExtensionInterface<MapNode>
+
+        bool connect(MapNode* mapNode) {
+            _layer = new ModelLayer("MGRS Graticule", new MGRSGraticule(mapNode, *this));
+            mapNode->getMap()->addLayer(_layer.get());
+            return true;
+        }
+
+        bool disconnect(MapNode* mapNode) {
+            mapNode->getMap()->removeLayer(_layer.get());
+            //mapNode->onModelLayerRemoved(_layer.get());
+            return true;
+        }
+
+
+    protected: // Object
+        MGRSGraticuleExtension(const MGRSGraticuleExtension& rhs, const osg::CopyOp& op) { }
+
+        osg::ref_ptr<ModelLayer> _layer;
+    };
+
+} } // namespace osgEarth::Util
+
+#endif // OSGEARTHUTIL_UTM_GRATICLE
