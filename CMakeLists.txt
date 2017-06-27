@@ -57,7 +57,7 @@ SET(OPENTHREADS_SONAMES TRUE)
 SET(OpenThreads_SOURCE_DIR ${OSGEARTH_SOURCE_DIR})
 
 # Good place to look for the OSG 3rd party libs
-SET(THIRD_PARTY_DIR "D:\osg\3rdParty_x64\x64" CACHE PATH "OSG 3rd-party dependency folder")
+SET(THIRD_PARTY_DIR "D:/OSGEarth/3rdParty_x64/x64" CACHE PATH "OSG 3rd-party dependency folder")
 
 # We have some custom .cmake scripts not in the official distribution.
 # Maybe this can be used override existing behavior if needed?
