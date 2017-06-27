@@ -1,0 +1,2 @@
+# JQEarth
+OSGEarth for JQGIS
